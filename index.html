@@ -127,7 +127,25 @@ function onPos(p){
 
  if(recording&&(!lastPos||dist(lastPos,pos)>=1.5)){if(lastPos)totalM+=dist(lastPos,pos);trail.push(pos);trailLayer.setLatLngs(trail);document.getElementById('distance').textContent=(totalM/1000).toFixed(1)}
 
- const ringCenter=[50.3466,6.9658];
+const ringCenter=[50.3466,6.9658];
+
+const distanceToRing=dist(pos,ringCenter);
+
+if(distanceToRing>3000){
+
+  document.getElementById('nextName').textContent='Nicht auf der Strecke';
+
+  document.getElementById('nextDist').textContent='–';
+
+}else{
+
+  const next=nearestUpcoming(pos,hdg);
+
+  document.getElementById('nextName').textContent=next?next.name:'–';
+
+  document.getElementById('nextDist').textContent=next?Math.round(next.d):'–';
+
+}
 
 const distanceToRing=dist(pos,ringCenter);
 
