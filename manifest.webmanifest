@@ -1,0 +1,11 @@
+{
+  "name": "RingDay Live Drive",
+  "short_name": "RingDay",
+  "description": "Live GPS Companion für die Nürburgring Nordschleife",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#111827",
+  "theme_color": "#05070a"
+}
