@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#05070a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>RingDay Info</title>
+<style>
+:root{color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#05070a;color:#f8fafc}
+body{padding:calc(env(safe-area-inset-top) + 18px) 14px calc(env(safe-area-inset-bottom) + 22px)}
+.wrap{max-width:720px;margin:0 auto}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.brand small{display:block;color:#86efac;font-weight:900;font-size:9px;letter-spacing:1.1px}
+.brand b{font-size:28px}
+.back{border:0;border-radius:14px;background:#1f2937;color:white;padding:11px 13px;font-weight:900}
+.card{background:linear-gradient(180deg,#0b1016,#080b0f);border:1px solid rgba(255,255,255,.09);border-radius:22px;padding:16px;margin-top:12px;box-shadow:0 16px 38px rgba(0,0,0,.25)}
+.card small{display:block;color:#94a3b8;font-size:9px;font-weight:900;letter-spacing:.75px}
+.status{font-size:30px;font-weight:950;margin-top:6px}
+.sub{color:#cbd5e1;font-size:13px;line-height:1.4;margin-top:6px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+button,a.action{border:0;border-radius:14px;padding:13px 12px;font-weight:900;font-size:13px;text-align:center;text-decoration:none}
+.primary{background:#16a34a;color:white}
+.secondary{background:#1f2937;color:white}
+.pill{display:inline-block;margin-top:8px;padding:7px 9px;border-radius:999px;background:rgba(34,197,94,.13);color:#86efac;font-size:10px;font-weight:900}
+.note{font-size:10px;color:#64748b;line-height:1.45;margin-top:10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mini{background:#0b1016;border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:14px}
+.mini b{display:block;font-size:18px;margin-top:4px}
+@media(max-width:520px){.grid{grid-template-columns:1fr}.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">
+      <small>RINGDAY</small>
+      <b>Info</b>
+    </div>
+    <button class="back" onclick="location.href='./?v=26'">← Strecke</button>
+  </div>
+
+  <div class="card">
+    <small>TOURISTENFAHRTEN · NORDSCHLEIFE · HEUTE</small>
+    <div id="hours" class="status">Wird geladen …</div>
+    <div id="state" class="sub">Aktuelle Öffnungszeit wird geprüft.</div>
+    <span id="badge" class="pill">LIVE</span>
+    <div class="row">
+      <button id="refresh" class="secondary">↻ Aktualisieren</button>
+      <a class="action primary" href="https://nuerburgring.de/track-info?locale=de" target="_blank" rel="noopener">Offizielle Track Info</a>
+    </div>
+    <div id="updated" class="note">Quelle: Nürburgring Track Info. Kurzfristige Änderungen oder Sperrungen sind möglich.</div>
+  </div>
+
+  <div class="grid">
+    <div class="mini">
+      <small>STRECKE</small>
+      <b>Nordschleife</b>
+      <div class="sub">Touristenfahrten</div>
+    </div>
+    <div class="mini">
+      <small>STATUS</small>
+      <b id="statusShort">Prüfen …</b>
+      <div class="sub">Heute</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <small>WICHTIG</small>
+    <div class="sub">Für verbindliche Öffnungszeiten, kurzfristige Unterbrechungen und Änderungen gilt immer die offizielle Nürburgring-Anzeige.</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const hours=document.getElementById('hours');
+  const state=document.getElementById('state');
+  const updated=document.getElementById('updated');
+  const refresh=document.getElementById('refresh');
+  const statusShort=document.getElementById('statusShort');
+
+  function parseToday(text){
+    const t=text.replace(/\r/g,'');
+    const marker=t.search(/Touristenfahrten\s+Nordschleife/i);
+    if(marker<0) return null;
+    const block=t.slice(marker,marker+800);
+    const m=block.match(/(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})/);
+    return m ? {from:m[1],to:m[2]} : null;
+  }
+
+  function isOpenNow(from,to){
+    const now=new Date();
+    const [fh,fm]=from.split(':').map(Number);
+    const [th,tm]=to.split(':').map(Number);
+    const mins=now.getHours()*60+now.getMinutes();
+    return mins>=fh*60+fm && mins<th*60+tm;
+  }
+
+  async function load(){
+    refresh.disabled=true;
+    hours.textContent='Wird geladen …';
+    state.textContent='Aktuelle Öffnungszeit wird geprüft.';
+    statusShort.textContent='Prüfen …';
+    try{
+      const u='https://r.jina.ai/http://nuerburgring.de/track-info?locale=de&_='+Date.now();
+      const r=await fetch(u,{cache:'no-store'});
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const text=await r.text();
+      const info=parseToday(text);
+      if(!info) throw new Error('Keine Zeit gefunden');
+      const open=isOpenNow(info.from,info.to);
+      hours.textContent=info.from+' – '+info.to;
+      state.textContent=open?'● JETZT GEÖFFNET':'Heute derzeit geschlossen';
+      state.style.color=open?'#86efac':'#cbd5e1';
+      statusShort.textContent=open?'Geöffnet':'Geschlossen';
+      updated.textContent='Live abgerufen: '+new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+
+        ' · Quelle: Nürburgring Track Info.';
+    }catch(e){
+      hours.textContent='Live-Abruf nicht möglich';
+      state.textContent='Bitte die offizielle Track Info öffnen.';
+      state.style.color='#fbbf24';
+      statusShort.textContent='Offiziell prüfen';
+      updated.textContent='Die Info-Seite konnte die Zeit nicht automatisch lesen. Die offizielle Seite bleibt direkt verfügbar.';
+    }finally{
+      refresh.disabled=false;
+    }
+  }
+  refresh.addEventListener('click',load);
+  load();
+})();
+</script>
+</body>
+</html>
